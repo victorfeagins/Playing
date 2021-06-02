@@ -2,7 +2,7 @@
 title: "Learning Bayesian Ideas"
 author: Victor Feagins
 date: 6/2/2021
-output: html_notebook
+output: html_document
 ---
 
 This is some practice to learning Bayesian Ideas in R.
