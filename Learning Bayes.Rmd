@@ -34,6 +34,7 @@ p_{success} \sim Uniform(min = 0, max = 1)
 $$
 
 ```{r}
+set.seed(123)
 n_draws <- 10000 #Create 10,000 draws
 
 prior <- runif(n_draws, min = 0, max = 1) #r means random and unif is uniform
@@ -60,5 +61,37 @@ print(quantile(posterior,c(.025,.5,.975)))
 ```
 
 We can determine that the rate at which people respond is most likely .39 between .18 and .611. From our data the rate was `r 6/16` which is close to the median in the posterior.
+
+The method used to solve this problem is called **Approximate Bayesian Computation** and is computationally slow. 
+
+
+#### Amazon Batteries
+
+I just bought batteries on amazon. I can see the reviews and most are 5 stars but a couple are 1 star or 2 stars. I want to determine the probablity of a 5 star review.
+
+##### The Facts 
+
+Data shows 78% are 5 stars reviews out of 30,207 reviews.
+
+Process: Bernoulli since I am interested if I will be a 5 star review.
+
+##### Solving the Problem
+
+I am looking for $p$ in the bernoulli process. I am going to use a prior of the beta distribution that is left skewed because I Victor Feagins like batteries have not had too much trouble with them in the past.
+
+```{r}
+n_draws.a <- 10000
+prior.a <- rbeta(n_draws, 8, 2)
+hist(prior.a)
+```
+
+Now we have our prior let's condition on it the data we know.
+
+```{r}
+posterior.a <- prior.a[round(prior.a,2) == .78] #
+
+hist(posterior.a)
+```
+
 
 
