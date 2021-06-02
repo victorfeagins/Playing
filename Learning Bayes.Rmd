@@ -88,8 +88,9 @@ hist(prior.a)
 Now we have our prior let's condition on it the data we know.
 
 ```{r}
-posterior.a <- prior.a[round(prior.a,2) == .78] #
+sim_data.a <- rbinom(n_draws.a, 30207, prior.a)
 
+posterior.a <- prior[sim_data.a == (round(30207*.78))]
 hist(posterior.a)
 ```
 
