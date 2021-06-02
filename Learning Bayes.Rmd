@@ -67,21 +67,22 @@ The method used to solve this problem is called **Approximate Bayesian Computati
 
 #### Amazon Batteries
 
-I just bought batteries on amazon. I can see the reviews and most are 5 stars but a couple are 1 star or 2 stars. I want to determine the probablity of a 5 star review.
+I just bought batteries on amazon. I can see the reviews and most are 5 stars but a couple are 1 star or 2 stars. I want to determine the probability of a 5 star review.
 
 ##### The Facts 
 
 Data shows 78% are 5 stars reviews out of 30,207 reviews.
 
-Process: Bernoulli since I am interested if I will be a 5 star review.
+Process: Binomial
 
 ##### Solving the Problem
 
-I am looking for $p$ in the bernoulli process. I am going to use a prior of the beta distribution that is left skewed because I Victor Feagins like batteries have not had too much trouble with them in the past.
+I am looking for $p$ in a Binomial process. I am going to use a prior of the beta distribution that is left skewed because I Victor Feagins like batteries have not had too much trouble with them in the past.
 
 ```{r}
-n_draws.a <- 10000
-prior.a <- rbeta(n_draws, 8, 2)
+n_draws.a <- 1000000
+prior.a <- rbeta(n_draws.a, 8, 2)
+#prior.a <- runif(n_draws.a, 0, 1)
 hist(prior.a)
 ```
 
@@ -90,9 +91,10 @@ Now we have our prior let's condition on it the data we know.
 ```{r}
 sim_data.a <- rbinom(n_draws.a, 30207, prior.a)
 
-posterior.a <- prior[sim_data.a == (round(30207*.78))]
+posterior.a <- prior.a[sim_data.a == (round(30207*.78))]
 hist(posterior.a)
+print(quantile(posterior.a,c(.025,.5,.975)))
 ```
 
-
+I believe this means that there is a .78 chance to give a 5 star review between .77 and .78.
 
