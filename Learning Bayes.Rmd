@@ -1,0 +1,64 @@
+---
+title: "Learning Bayesian Ideas"
+author: Victor Feagins
+date: 6/2/2021
+output: html_notebook
+---
+
+This is some practice to learning Bayesian Ideas in R.
+
+#### Question 1
+
+Swedish Fish Incorporated is the largest Swedish company delivering fish by mail order. They are now trying to get into the lucrative Danish market by selling one year Salmon subscriptions. The marketing department have done a pilot study and tried the following marketing method:
+
+A: Sending a mail with a colorful brochure that invites people to sign up for a one year salmon subscription.
+
+The marketing department sent out 16 mails of type A. Six Danes that received a mail signed up for one year of salmon and marketing now wants to know, how good is method A? This questions comes from <http://www.sumsar.net/files/posts/2017-bayesian-tutorial-exercises/modeling_exercise1.html>
+
+##### The Facts
+
+What do we know.
+
+Data: 6/16 people signed up
+
+Process: Binomial process because we are counting successes from mail sent.
+
+##### Solving the Problem
+
+We want to know the rate $p_{success}$ at which people respond. We need to draw from a prior distribution and then condition on the data.
+
+We are going to say that the prior at which people respond is between 0 and 1 with equal likely chance across the board. We do this with a uniform distribution. 
+
+$$
+p_{success} \sim Uniform(min = 0, max = 1)
+$$
+
+```{r}
+n_draws <- 10000 #Create 10,000 draws
+
+prior <- runif(n_draws, min = 0, max = 1) #r means random and unif is uniform
+hist(prior)
+```
+
+Now that we have a prior distribution for our parameter we can generate our data based on the prior. By using the `rbinom` to simulate a binomial process for 16 events
+
+```{r}
+sim_data <- rbinom(n_draws, 16, prior)
+hist(sim_data)
+```
+
+This is the prior data.
+
+Now we condition our data which was 6/16 people responded so 6 successes to get our posterior
+
+```{r}
+posterior <- prior[sim_data == 6]
+hist(posterior)
+
+print(quantile(posterior,c(.025,.5,.975)))
+
+```
+
+We can determine that the rate at which people respond is most likely .39 between .18 and .611. From our data the rate was `r 6/16` which is close to the median in the posterior.
+
+
