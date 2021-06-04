@@ -156,7 +156,7 @@ df.A.jags <- jags.model(
 df.A.sim <- coda.samples(
   model = df.A.jags,
   variable.names = c("b0", "b1", 'b2', 'b3', 's'),
-  n.iter = 10000
+  n.iter = 100000
 )
 
 
