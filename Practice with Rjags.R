@@ -135,11 +135,20 @@ A.data <- list(
 )
 
 #### Initial ----
+A.n.chains <- 3
+A.inital.coef <- coef(lm(mpg ~ displacement + horsepower + weight))
+A.inits = list()
+for(i in 1:A.n.chains){
+  A.inits[[i]] <- list(b0 = rnorm(1,A.inital.coef['(Intercept)'],200),
+                     b1 = rnorm(1,A.inital.coef["displacement"], 200),
+                     b2 = rnorm(1,A.inital.coef["horsepower"], 200),
+                     b3 = rnorm(1,A.inital.coef["weight"], 200),
+                     .RNG.name = "base::Wichmann-Hill",
+                     .RNG.seed = 10)
+}
 
-A.inits <- list(
-  .RNG.name = "base::Wichmann-Hill",
-  .RNG.seed = 10
-)
+
+
 
 
 ### Running JAGS ----
@@ -148,7 +157,7 @@ df.A.jags <- jags.model(
   file = textConnection(df.A.model),
   data = A.data,
   inits = A.inits,
-  n.chains = 3
+  n.chains = A.n.chains
 )
 
 
@@ -167,7 +176,7 @@ df.A.sim <- coda.samples(
 plot(df.A.sim)
 #I am curious if it looks better just because it has more points so can't see the detail.
 plot(window(df.A.sim, A.n.iter-1000))
-# When looking at the small window of 
+# When looking at the small window it is not converging. 
 
 
 summary(df.A.sim)
