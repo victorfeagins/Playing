@@ -153,11 +153,12 @@ df.A.jags <- jags.model(
 
 
 ### Drawing from posterior
+A.n.iter <- 100000
 
 df.A.sim <- coda.samples(
   model = df.A.jags,
   variable.names = c("b0", "b1", 'b2', 'b3', 's'),
-  n.iter = 100000
+  n.iter = A.n.iter
 )
 
 
@@ -165,8 +166,8 @@ df.A.sim <- coda.samples(
 
 plot(df.A.sim)
 #I am curious if it looks better just because it has more points so can't see the detail.
-plot(window(df.A.sim, 100000-1000))
-
+plot(window(df.A.sim, A.n.iter-1000))
+# When looking at the small window of 
 
 
 summary(df.A.sim)
