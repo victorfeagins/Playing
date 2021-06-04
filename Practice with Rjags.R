@@ -4,6 +4,7 @@
 
 # Packages ----
 library(rjags) #Uses JAGS to create bayesian models
+library(coda)
 library(tidyverse) #Utility functions
 
 # Functions ----
@@ -160,12 +161,18 @@ df.A.sim <- coda.samples(
 )
 
 
-### Analyzing results ----
+### Diagnostics ----
 
 plot(df.A.sim)
+#I am curious if it looks better just because it has more points so can't see the detail.
+plot(window(df.A.sim, 100000-1000))
+
+
 
 summary(df.A.sim)
 
-
+# we see the coefficients are negative which agree with our preliminary data. 
+gelman.diag(df.A.sim)
+gelman.plot(df.A.sim)
 
 
