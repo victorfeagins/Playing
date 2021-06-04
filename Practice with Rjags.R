@@ -136,7 +136,7 @@ A.data <- list(
 
 #### Initial ----
 A.n.chains <- 3
-A.inital.coef <- coef(lm(mpg ~ displacement + horsepower + weight))
+A.inital.coef <- coef(df.A.lm <- lm(mpg ~ displacement + horsepower + weight))
 A.inits = list()
 for(i in 1:A.n.chains){
   A.inits[[i]] <- list(b0 = rnorm(1,A.inital.coef['(Intercept)'],200),
@@ -157,7 +157,8 @@ df.A.jags <- jags.model(
   file = textConnection(df.A.model),
   data = A.data,
   inits = A.inits,
-  n.chains = A.n.chains
+  n.chains = A.n.chains,
+  n.adapt=0 #Is this the same as burn in?
 )
 
 
@@ -171,18 +172,59 @@ df.A.sim <- coda.samples(
 )
 
 
+### Determining Burnin ----
+plot(window(df.A.sim, 1,1000), density = F)
+#Seems 1000 is a good burnin time
+
+df.A.sim.nb <- window(df.A.sim, 1000)
+
+
 ### Diagnostics ----
 
-plot(df.A.sim)
+plot(df.A.sim.nb)
 #I am curious if it looks better just because it has more points so can't see the detail.
-plot(window(df.A.sim, A.n.iter-1000))
-# When looking at the small window it is not converging. 
+plot(window(df.A.sim.nb, A.n.iter-5000))
+# When looking at the small window seems okay.
 
 
-summary(df.A.sim)
-
+summary(df.A.sim.nb)
 # we see the coefficients are negative which agree with our preliminary data. 
-gelman.diag(df.A.sim)
-gelman.plot(df.A.sim)
+
+gelman.diag(df.A.sim.nb)
+gelman.plot(df.A.sim.nb)
+
+
+### Inference ----
+df.A.sim.post <- data.frame(df.A.sim.nb[[1]])
+
+#Density for each parameter
+df.A.sim.post %>% 
+  gather() %>% 
+  ggplot(mapping = aes(value))+
+  facet_wrap(~key, scales = "free")+
+  geom_density()
+
+#95 % Credible interval
+df.A.sim.post %>%
+  gather() %>% 
+  group_by(key) %>% 
+  summarise(mean = mean(value),
+            q2.5= quantile(value, .025),
+            q97.5 = quantile(value, .975))
+#Interestingly the b1 variable changes from positive to negative.
+mean(df.A.sim.post$b1 > 0)
+#There is a 20% chance of b1 being positive.
+summary(df.A.lm)
+# When comparing with a standard linear regression we can see that b1(displacement)
+#is not significant
+
+#correlation of parameters
+pairs(df.A.sim.post)
+cor(df.A.sim.post)
+# There seems to be multicolinearity which we saw already.
+
+
+
+
 
 
