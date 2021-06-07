@@ -1,0 +1,96 @@
+---
+title: "Intro_to_JAGs_Task1_Tasks2"
+author: "Victor Feagins"
+date: "6/7/2021"
+output: html_document
+---
+## Packages
+
+```{r}
+library(rjags) #Uses JAGS to create bayesian models
+library(coda)
+library(tidyverse) #Utility functions
+```
+
+### Task 1
+* Evaluate the MCMC chain for convergence. Include relevant diagnostics and plots. Determine and remove burn-in
+* Report parameter summary table and plot marginal distributions
+* Describe and explain the parameter covariances that you observe in the pairs plot and parameter correlation matrix.
+* Compare the summary statistics for the Bayesian regression model to those from the classical regression:  summary(lm( y ~ x1 )).  This should include a comparison of the means and uncertainties of **all 3 model parameters**
+
+#### Loading in Data
+```{r}
+load("data/Ex05.Part1.RData")
+
+```
+
+#### Modeling in Rjags
+##### Model priors
+```{r}
+T.1.model <- "model {
+#Model
+for (i in 1:length(Y)) {
+Y[i] ~ dnorm(mu[i], s^(-2))
+mu[i] <- b0 + b1*x1[i]
+}
+
+#Prior
+b0 ~ dnorm(0, 200^(-2))
+b1 ~ dnorm(0, 200^(-2))
+
+s ~ dunif(0,200)
+
+}"
+```
+
+
+##### Model Data
+```{r}
+T.1.data <- list(
+  Y = y,
+  x1 = x1
+)
+```
+
+##### Initalization 
+```{r}
+T.1.n.chains <- 3
+T.1.inital.coef <- coef(T.1.lm <- lm(y ~ x1))
+T.1.inits = list()
+for(i in 1:T.1.n.chains){
+  T.1.inits[[i]] <- list(b0 = rnorm(1,T.1.inital.coef['(Intercept)'],200),
+                     b1 = rnorm(1,T.1.inital.coef["x1"], 200),
+                     .RNG.name = "base::Wichmann-Hill",
+                     .RNG.seed = 10)
+}
+
+```
+
+##### Running Rjags
+
+```{r}
+T.1.jags <- jags.model(
+  file = textConnection(T.1.model),
+  data = T.1.data,
+  inits = T.1.inits,
+  n.chains = T.1.n.chains,
+  n.adapt=1000
+)
+```
+
+##### Simulating Priors
+
+```{r}
+T.1.n.iter <- 5000
+
+T.1.sim <- coda.samples(
+  model = T.1.jags,
+  variable.names = c("b0", "b1", 's'),
+  n.iter = T.1.n.iter
+)
+```
+
+##### Diagnostics
+
+
+
