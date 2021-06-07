@@ -61,6 +61,7 @@ T.1.inits = list()
 for(i in 1:T.1.n.chains){
   T.1.inits[[i]] <- list(b0 = rnorm(1,T.1.inital.coef['(Intercept)'],200),
                      b1 = rnorm(1,T.1.inital.coef["x1"], 200),
+                     s = sigma(T.1.lm),
                      .RNG.name = "base::Wichmann-Hill",
                      .RNG.seed = 10)
 }
@@ -83,7 +84,7 @@ T.1.jags <- jags.model(
 ##### Simulating Priors
 
 ```{r}
-T.1.n.iter <- 5000
+T.1.n.iter <- 10000
 
 T.1.sim <- coda.samples(
   model = T.1.jags,
@@ -101,7 +102,7 @@ plot(T.1.sim)
 
 Let's see if the last 1000 iterations look like
 ```{r}
-window(T.1.sim, 5000) %>% 
+window(T.1.sim, T.1.n.iter) %>% 
   plot(., density = F)
 
 ```
@@ -123,7 +124,7 @@ Next let's get rid of samples that were before convergence. BGR statistic versus
 gelman.plot(T.1.sim)
 ```
 
-Looking at the plots 500 iterations seems to be a good burnin time. Keep in mind the plots are starting at 1000 because of the `n.adapt` from the `jags.model` 
+Looking at the plots 1000 iterations seems to be a good burnin time. Keep in mind the plots are starting at 1000 because of the `n.adapt` from the `jags.model` 
 
 
 ##### Inference 
@@ -131,7 +132,8 @@ Looking at the plots 500 iterations seems to be a good burnin time. Keep in mind
 Before doing any inference it is important to remove burn in samples as they were before the convergence.
 
 ```{r}
-T.1.sim.prior <- window(T.1.sim, T.1.n.adapt + 500) #500 observations after n.adapt
+T.1.burn <- 1000
+T.1.sim.prior <- window(T.1.sim, T.1.n.adapt + T.1.burn) #observations after n.adapt
 ```
 
 ```{r}
@@ -145,9 +147,10 @@ acf(T.1.sim.prior[[1]])
 acf(T.1.sim.prior[[2]])
 acf(T.1.sim.prior[[3]])
 ```
+
 Yep in all the chains the acf dies down after 10 lags.
 
-I want the effective Size to be greater then 5000. 
+I want the effective Size to be greater then 5000. This is with `r T.1.n.iter` number of iterations
 ```{r}
 effectiveSize(T.1.sim.prior)
 ```
