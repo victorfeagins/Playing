@@ -81,7 +81,7 @@ T.1.jags <- jags.model(
 )
 ```
 
-##### Simulating Priors
+##### Simulating Posterior
 
 ```{r}
 T.1.n.iter <- 10000
@@ -140,7 +140,7 @@ T.1.sim.prior <- window(T.1.sim, T.1.n.adapt + T.1.burn) #observations after n.a
 acfplot(T.1.sim.prior) # how to make it not smushed
 ```
 
-The autocorelation seems to decay after 10 lags.
+The autocorelation seems to die off after 10 lags.
 
 ```{r}
 acf(T.1.sim.prior[[1]])
@@ -150,8 +150,229 @@ acf(T.1.sim.prior[[3]])
 
 Yep in all the chains the acf dies down after 10 lags.
 
-I want the effective Size to be greater then 5000. This is with `r T.1.n.iter` number of iterations
+I want the effective Size to be greater then 5000. This is with `r T.1.n.iter` number of iterations.
+I might need to change the priors if I want to increase the effective sample size?
+
 ```{r}
-effectiveSize(T.1.sim.prior)
+effectiveSize(T.1.sim.prior) #Change the priors to increase?
 ```
+
+```{r}
+cumuplot(T.1.sim.prior,probs=c(0.025,0.25,0.5,0.75,0.975))
+```
+
+
+
+Saving prior distribution as dataframe to do further analysis.
+```{r}
+T.1.prior.df <- data.frame(as.matrix(T.1.sim.prior))
+```
+
+
+```{r}
+pairs(T.1.prior.df)	## pairs plot to evaluate parameter correlation
+cor(T.1.prior.df)    ## correlation matrix among model parameters
+```
+
+There is a linearity for b1 and b0. This is typical in linear regression. The standard deviation seems to uncorrelated with the parameters b0 and b1.
+
+```{r}
+#Density for each parameter
+T.1.prior.df %>% 
+  gather() %>% 
+  ggplot(mapping = aes(value))+
+  facet_wrap(~key, scales = "free")+
+  geom_density()
+```
+```{r}
+summary(T.1.sim.prior)
+```
+
+Comparing with the linear regression
+```{r}
+summary(T.1.lm)
+sigma(T.1.lm)
+confint(T.1.lm)
+```
+
+The results are very similar from the two approaches. The estimates are almost identical. The estimate for the standard deviation is lower then the linear regression. The confidence interval compared to the credible interval are also very similar. 
+
+### Task 2
+
+Using the dataset "data/Ex05.Part2.RData", extend your univariate regression to a multiple regression model with two covariates (x1, x2) and an interaction term (x1*x2). In doing so, not only do you need to update your process model, but you also need to make sure to update the dimension of your prior and initial conditions on $b$ from 2 to 4.
+
+* Show the JAGS and R code used.
+* Include relevant convergence diagnostics and plots. 
+* Report parameter summary table. 
+* Plot marginal parameter distributions and pairwise parameter correlations (stats and scatter plots).
+
+#### Loading in Data
+
+```{r}
+load("data/Ex05.Part2.RData")
+```
+
+#### Modeling in Rjags
+##### Model priors
+```{r}
+T.2.model <- "model {
+#Model
+for (i in 1:length(Y)) {
+Y[i] ~ dnorm(mu[i], s^(-2))
+mu[i] <- b0 + b1*x1[i] + b2*x2[i] + b3*x1.2[i]
+}
+#x1.2 is the interaction term
+#Prior
+b0 ~ dnorm(0, 200^(-2))
+b1 ~ dnorm(0, 200^(-2))
+b2 ~ dnorm(0, 200^(-2))
+b3 ~ dnorm(0, 200^(-2))
+
+s ~ dunif(0,200)
+}"
+
+```
+
+##### Model data
+
+```{r}
+T.2.data <- list(
+  Y = y,
+  x1 = x1,
+  x2 = x2,
+  x1.2 = x1*x2
+)
+```
+##### Initalization
+
+```{r}
+T.2.n.chains <- 3
+T.2.inital.coef <- coef(T.2.lm <- lm(y ~ x1*x2))
+T.2.inits = list()
+for(i in 1:T.2.n.chains){
+  T.2.inits[[i]] <- list(b0 = rnorm(1,T.2.inital.coef['(Intercept)'],200),
+                     b1 = rnorm(1,T.2.inital.coef["x1"], 200),
+                     b2 = rnorm(1,T.2.inital.coef["x2"], 200),
+                     b3 = rnorm(1, T.2.inital.coef["x1:x2"], 200),
+                     s = sigma(T.2.lm),
+                     .RNG.name = "base::Wichmann-Hill",
+                     .RNG.seed = 10)
+}
+
+```
+
+##### Running Rjags
+```{r}
+T.2.n.adapt <- 1000
+T.2.jags <- jags.model(
+  file = textConnection(T.2.model),
+  data = T.2.data,
+  inits = T.2.inits,
+  n.chains = T.2.n.chains,
+  n.adapt = T.2.n.adapt
+)
+```
+
+##### Simulating Posterior
+```{r}
+T.2.n.iter <- 10000
+
+T.2.sim <- coda.samples(
+  model = T.2.jags,
+  variable.names = c("b0", "b1", "b2", "b3", 's'),
+  n.iter = T.2.n.iter
+)
+```
+
+##### Diagnostics
+Looks good zoomed out.
+```{r}
+plot(T.2.sim, density = F)
+```
+
+ 
+b1 looks a little off.
+```{r}
+plot(window(T.2.sim, T.2.n.iter - 1000), density = F)
+```
+
+
+
+The Brooks-Gelman-Rubin (BGR) statistic looks good. All less than 1.1.
+```{r}
+gelman.diag(T.2.sim)
+```
+
+```{r}
+gelman.plot(T.2.sim)
+```
+
+Possible burnin time that would be good seems to be 2500.
+
+##### Inference 
+
+Before doing any inference it is important to remove burn in samples as they were before the convergence.
+
+```{r}
+T.2.burn <- 2500
+T.2.sim.prior <- window(T.2.sim, T.2.burn) #observations after n.adapt
+```
+
+
+```{r}
+acf(T.2.sim.prior[[1]])
+acf(T.2.sim.prior[[2]])
+acf(T.2.sim.prior[[3]])
+```
+
+Autocorrelation is worse is this model. The ACF does not cut off it decays slowly.
+
+I want the effective Size to be greater then 5000. This is with `r T.2.n.iter` number of iterations.
+I might need to change the priors if I want to increase the effective sample size?
+
+```{r}
+effectiveSize(T.2.sim.prior) #Change the priors to increase?
+```
+
+Yes the effective size is extremely small 
+
+```{r}
+cumuplot(T.2.sim.prior,probs=c(0.025,0.25,0.5,0.75,0.975))
+```
+
+
+
+Saving prior distribution as dataframe to do further analysis.
+```{r}
+T.2.prior.df <- data.frame(as.matrix(T.2.sim.prior))
+```
+
+
+```{r}
+pairs(T.2.prior.df)	## pairs plot to evaluate parameter correlation
+cor(T.2.prior.df)    ## correlation matrix among model parameters
+```
+
+There is a linearity for b1 and b0 and b3. 
+
+```{r}
+#Density for each parameter
+T.2.prior.df %>% 
+  gather() %>% 
+  ggplot(mapping = aes(value))+
+  facet_wrap(~key, scales = "free")+
+  geom_density()
+```
+```{r}
+summary(T.2.sim.prior)
+```
+
+Comparing with the linear regression
+```{r}
+summary(T.2.lm)
+sigma(T.2.lm)
+confint(T.2.lm)
+```
+
+The results are very similar from the two approaches. The estimates are almost identical. The estimate for the standard deviation is higher then the linear regression. The confidence interval compared to the credible interval are also very similar. 
 
