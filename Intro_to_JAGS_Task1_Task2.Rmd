@@ -54,6 +54,7 @@ T.1.data <- list(
 
 ##### Initalization 
 ```{r}
+set.seed(10)
 T.1.n.chains <- 3
 T.1.inital.coef <- coef(T.1.lm <- lm(y ~ x1))
 T.1.inits = list()
@@ -69,12 +70,13 @@ for(i in 1:T.1.n.chains){
 ##### Running Rjags
 
 ```{r}
+T.1.n.adapt <- 1000
 T.1.jags <- jags.model(
   file = textConnection(T.1.model),
   data = T.1.data,
   inits = T.1.inits,
   n.chains = T.1.n.chains,
-  n.adapt=1000
+  n.adapt = T.1.n.adapt
 )
 ```
 
@@ -91,6 +93,62 @@ T.1.sim <- coda.samples(
 ```
 
 ##### Diagnostics
+First we examine the trace plots. We want to see convergence and overlap over the `r T.1.n.chains` chains
+
+```{r}
+plot(T.1.sim)
+```
+
+Let's see if the last 1000 iterations look like
+```{r}
+window(T.1.sim, 5000) %>% 
+  plot(., density = F)
+
+```
+
+I looks like the 3 chains are overlaping each other 
+
+Next let's examine Brooks-Gelman-Rubin (BGR) statistic 
+
+```{r}
+gelman.diag(T.1.sim)
+
+```
+
+A value of 1 is great. If it was higher than 1.1 that would be bad.
+
+Next let's get rid of samples that were before convergence. BGR statistic versus sample plots below. We want to remove samples that were when the BGR was greater then 1.05
+
+```{r}
+gelman.plot(T.1.sim)
+```
+
+Looking at the plots 500 iterations seems to be a good burnin time. Keep in mind the plots are starting at 1000 because of the `n.adapt` from the `jags.model` 
 
 
+##### Inference 
+
+Before doing any inference it is important to remove burn in samples as they were before the convergence.
+
+```{r}
+T.1.sim.prior <- window(T.1.sim, T.1.n.adapt + 500) #500 observations after n.adapt
+```
+
+```{r}
+acfplot(T.1.sim.prior) # how to make it not smushed
+```
+
+The autocorelation seems to decay after 10 lags.
+
+```{r}
+acf(T.1.sim.prior[[1]])
+acf(T.1.sim.prior[[2]])
+acf(T.1.sim.prior[[3]])
+```
+Yep in all the chains the acf dies down after 10 lags.
+
+I want the effective Size to be greater then 5000. 
+```{r}
+effectiveSize(T.1.sim.prior)
+```
 
